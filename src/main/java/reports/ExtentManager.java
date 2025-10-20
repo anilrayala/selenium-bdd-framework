@@ -20,6 +20,10 @@ public class ExtentManager {
             sparkReporter.config().setReportName("BDD Selenium Test Results");
             sparkReporter.config().setTheme(Theme.STANDARD);
 
+            // ✅ Add these two lines below ⬇️
+            sparkReporter.config().setEncoding("UTF-8");          // ensures correct encoding
+            sparkReporter.config().setTimelineEnabled(true);
+
             extent = new ExtentReports();
             extent.attachReporter(sparkReporter);
             extent.setSystemInfo("Project", "BDD Selenium Framework");

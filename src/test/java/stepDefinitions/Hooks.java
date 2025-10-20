@@ -7,7 +7,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
 import reports.ExtentTestManager;
+import factory.DriverFactory;
+import utils.ConfigReader;
 
 public class Hooks extends BaseTest {
 
@@ -15,7 +18,9 @@ public class Hooks extends BaseTest {
 
     @Before
     public void beforeScenario(Scenario scenario) {
-        setUp();
+        ConfigReader.loadConfig();
+        DriverFactory.initializeDriver(); // ✅ only here
+        setUp(); // just fetch reference
         ExtentTestManager.startTest(scenario.getName());
         logger.info("===== Starting Scenario: {} =====", scenario.getName());
     }
@@ -30,7 +35,6 @@ public class Hooks extends BaseTest {
             logger.error("Step failed: {}", scenario.getName());
         } else {
             ExtentTestManager.logStatus(Status.PASS, "Step passed");
-            logger.info("Step passed");
         }
     }
 
@@ -41,7 +45,6 @@ public class Hooks extends BaseTest {
         } else {
             ExtentTestManager.logStatus(Status.PASS, "Scenario passed: " + scenario.getName());
         }
-
         tearDown();
         logger.info("===== Finished Scenario: {} =====", scenario.getName());
     }

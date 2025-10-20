@@ -1,6 +1,5 @@
 package stepDefinitions;
 
-
 import com.aventstack.extentreports.Status;
 import base.BaseTest;
 import reports.ExtentTestManager;
@@ -8,6 +7,7 @@ import io.cucumber.java.en.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Assertions;
+import factory.DriverFactory;
 
 public class GoogleSteps extends BaseTest {
 
@@ -15,7 +15,8 @@ public class GoogleSteps extends BaseTest {
 
     @Given("user launches the browser")
     public void user_launches_the_browser() {
-        setUp();
+        // ❌ no setUp() here — Hooks already did that
+        driver = DriverFactory.getDriver();
         ExtentTestManager.logStatus(Status.INFO, "Browser launched successfully");
         logger.info("Browser launched successfully");
     }
@@ -36,9 +37,9 @@ public class GoogleSteps extends BaseTest {
 
         Assertions.assertTrue(actualTitle.contains(expectedTitle),
                 "Page title mismatch! Expected to contain: " + expectedTitle);
-        ExtentTestManager.logStatus(Status.PASS, "Verified title contains: " + expectedTitle);
-        logger.info("Verified title contains: {}", expectedTitle);
 
-        tearDown();
+        ExtentTestManager.logStatus(Status.PASS, "Verified title contains: " + expectedTitle);
+        ExtentTestManager.captureScreenshot(driver,"Google Page Title");
+        logger.info("Verified title contains: {}", expectedTitle);
     }
 }

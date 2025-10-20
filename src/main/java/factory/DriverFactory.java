@@ -10,44 +10,54 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import utils.ConfigReader;
 
+import java.time.Duration;
+
 public class DriverFactory {
 
-    private static ThreadLocal<WebDriver> driver = new ThreadLocal<>();
+    private static final ThreadLocal<WebDriver> driver = new ThreadLocal<>();
 
     public static WebDriver initializeDriver() {
-        String browser = ConfigReader.getProperty("browser").toLowerCase();
-        boolean headless = ConfigReader.getBoolean("headless");
+        if (driver.get() == null) { // ✅ create only once
+            String browser = ConfigReader.getProperty("browser").toLowerCase();
+            boolean headless = ConfigReader.getBoolean("headless");
 
-        switch (browser) {
-            case "chrome":
-                WebDriverManager.chromedriver().setup();
-                ChromeOptions chromeOptions = new ChromeOptions();
-                if (headless) chromeOptions.addArguments("--headless=new");
-                chromeOptions.addArguments("--start-maximized");
-                driver.set(new ChromeDriver(chromeOptions));
-                break;
+            switch (browser) {
+                case "firefox":
+                    WebDriverManager.firefoxdriver().setup();
+                    FirefoxOptions fOpts = new FirefoxOptions();
+                    if (headless) fOpts.addArguments("--headless");
+                    driver.set(new FirefoxDriver(fOpts));
+                    break;
 
-            case "firefox":
-                WebDriverManager.firefoxdriver().setup();
-                FirefoxOptions firefoxOptions = new FirefoxOptions();
-                if (headless) firefoxOptions.addArguments("--headless");
-                driver.set(new FirefoxDriver(firefoxOptions));
-                break;
+                case "edge":
+                    WebDriverManager.edgedriver().setup();
+                    EdgeOptions eOpts = new EdgeOptions();
+                    if (headless) eOpts.addArguments("--headless=new");
+                    driver.set(new EdgeDriver(eOpts));
+                    break;
 
-            case "edge":
-                WebDriverManager.edgedriver().setup();
-                EdgeOptions edgeOptions = new EdgeOptions();
-                if (headless) edgeOptions.addArguments("--headless=new");
-                driver.set(new EdgeDriver(edgeOptions));
-                break;
+                case "chrome":
+                default:
+                    WebDriverManager.chromedriver().setup();
+                    ChromeOptions cOpts = new ChromeOptions();
+                    if (headless) cOpts.addArguments("--headless=new");
+                    cOpts.addArguments("--remote-allow-origins=*");
+                    driver.set(new ChromeDriver(cOpts));
+                    break;
+            }
 
-            default:
-                throw new IllegalArgumentException("❌ Unsupported browser: " + browser);
+            WebDriver webDriver = driver.get();
+            webDriver.manage().window().maximize();
+            webDriver.manage().deleteAllCookies();
+
+            // 🕒 Apply waits only once here
+            webDriver.manage().timeouts().implicitlyWait(
+                    Duration.ofSeconds(ConfigReader.getInt("implicitWait")));
+            webDriver.manage().timeouts().pageLoadTimeout(
+                    Duration.ofSeconds(ConfigReader.getInt("pageLoadTimeout")));
         }
 
-        getDriver().manage().window().maximize();
-        getDriver().manage().deleteAllCookies();
-        return getDriver();
+        return driver.get(); // reuse existing driver
     }
 
     public static WebDriver getDriver() {
