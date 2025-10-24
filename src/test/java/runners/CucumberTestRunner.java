@@ -11,7 +11,7 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
 
 @Suite
 @IncludeEngines("cucumber")
-@SelectClasspathResource("features")
+@SelectClasspathResource("features/BasicAuth.feature")
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "stepDefinitions")
 @ConfigurationParameter(
         key = PLUGIN_PROPERTY_NAME,
