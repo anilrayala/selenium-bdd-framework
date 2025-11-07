@@ -6,11 +6,12 @@ import com.aventstack.extentreports.Status;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
+import factory.DriverFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -27,13 +28,24 @@ public class ExtentTestManager {
         return extentTest.get();
     }
 
+    private static synchronized ExtentTest getTestSafe() {
+        ExtentTest t = extentTest.get();
+        if (t == null) {
+            t = extent.createTest("FallbackTest_" + System.currentTimeMillis());
+            extentTest.set(t);
+            t.log(Status.WARNING, "Auto-created fallback ExtentTest because no test was active.");
+        }
+        return t;
+    }
+
     public static synchronized void startTest(String testName) {
         ExtentTest test = extent.createTest(testName);
         extentTest.set(test);
     }
 
     public static synchronized void logStatus(Status status, String message) {
-        getTest().log(status, message);
+        ExtentTest test = getTestSafe();
+        test.log(status, message);
         switch (status) {
             case PASS -> passCount++;
             case FAIL -> failCount++;
@@ -42,36 +54,60 @@ public class ExtentTestManager {
         }
     }
 
+    /**
+     * Robust screenshot capture:
+     * 1) Use DriverFactory as fallback
+     * 2) Single call to get bytes
+     * 3) Write to temp file then move atomically
+     * 4) Attach base64 + file path to Extent
+     */
     public static synchronized void captureScreenshot(WebDriver driver, String screenshotName) {
+        if (driver == null) {
+            driver = DriverFactory.getDriver();
+        }
+
+        ExtentTest test = getTestSafe();
+
+        if (driver == null) {
+            test.log(Status.WARNING, "Driver is null — cannot capture screenshot.");
+            return;
+        }
+
+        if (!(driver instanceof TakesScreenshot)) {
+            test.log(Status.WARNING, "Driver does not support screenshots (TakesScreenshot).");
+            return;
+        }
+
         try {
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             Path screenshotDir = Path.of(System.getProperty("user.dir"), "reports", "screenshots");
-
-            // ✅ Ensure directory exists
             Files.createDirectories(screenshotDir);
 
-            // Take screenshot both as file and Base64
             TakesScreenshot ts = (TakesScreenshot) driver;
-            File srcFile = ts.getScreenshotAs(OutputType.FILE);
-            String base64Screenshot = ts.getScreenshotAs(OutputType.BASE64);
+            byte[] bytes = ts.getScreenshotAs(OutputType.BYTES); // single call
+            String base64Screenshot = java.util.Base64.getEncoder().encodeToString(bytes);
 
-            // Save a physical copy as well (for manual access if needed)
-            Path destinationPath = screenshotDir.resolve(screenshotName + "_" + timestamp + ".png");
-            Files.copy(srcFile.toPath(), destinationPath);
+            Path tempFile = Files.createTempFile(screenshotDir, "tmp_screenshot_", ".png");
+            Files.write(tempFile, bytes);
 
-            // ✅ Embed inline image in Extent report
-            getTest().log(Status.INFO,
-                    "📸 Screenshot captured below:<br>" +
-                            "<img src='data:image/png;base64," + base64Screenshot +
-                            "' width='500' height='340' style='border:1px solid #ccc; border-radius:6px;'/>");
+            String safeName = screenshotName.replaceAll("[\\\\/:*?\"<>|]", "_");
+            Path destinationPath = screenshotDir.resolve(safeName + "_" + timestamp + ".png");
+            Files.move(tempFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Optional: also add to Spark report as attachment
-            getTest().addScreenCaptureFromBase64String(base64Screenshot, screenshotName);
-
+            String absPath = destinationPath.toAbsolutePath().toString();
+            test.log(Status.INFO, "📁 Screenshot saved to: " + absPath);
+            test.log(Status.INFO,
+                    "📸 Screenshot:<br><img src='data:image/png;base64," + base64Screenshot +
+                            "' width='700' style='border:1px solid #ccc; border-radius:6px;'/>");
+            try {
+                test.addScreenCaptureFromPath(absPath);
+            } catch (Exception e) {
+                test.log(Status.INFO, "Failed to add file-based screenshot to Extent: " + e.getMessage());
+            }
         } catch (IOException e) {
-            getTest().log(Status.WARNING, "Unable to capture screenshot: " + e.getMessage());
+            getTestSafe().log(Status.WARNING, "Unable to capture screenshot (IO): " + e.getMessage());
         } catch (Exception e) {
-            getTest().log(Status.WARNING, "Unexpected error capturing screenshot: " + e.getMessage());
+            getTestSafe().log(Status.WARNING, "Unexpected error capturing screenshot: " + e.getMessage());
         }
     }
 

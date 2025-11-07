@@ -2,13 +2,14 @@ package stepDefinitions;
 
 import base.BaseTest;
 import com.aventstack.extentreports.Status;
+import factory.DriverFactory;
 import io.cucumber.java.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
 import reports.ExtentTestManager;
-import factory.DriverFactory;
 import utils.ConfigReader;
 
 public class Hooks extends BaseTest {
@@ -17,23 +18,45 @@ public class Hooks extends BaseTest {
 
     @Before
     public void beforeScenario(Scenario scenario) {
+        // Load config and ensure driver exists for this thread
         ConfigReader.loadConfig();
-        DriverFactory.initializeDriver(); // ✅ only here
-        setUp(); // just fetch reference
+        DriverFactory.initializeDriver();          // initialize driver (if not already)
+        setUp();                                   // fetch driver into BaseTest.driver
         ExtentTestManager.startTest(scenario.getName());
         logger.info("===== Starting Scenario: {} =====", scenario.getName());
     }
 
     @AfterStep
     public void afterStep(Scenario scenario) {
+        WebDriver drv = DriverFactory.getDriver(); // single source of truth
+        logger.debug("Hooks.afterStep — driver instance: {}", (drv == null ? "null" : drv.getClass().getName()));
+
         if (scenario.isFailed()) {
             ExtentTestManager.logStatus(Status.FAIL, "Step failed");
-            byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-            scenario.attach(screenshot, "image/png", "Failure Screenshot");
-            ExtentTestManager.captureScreenshot(driver, scenario.getName().replaceAll("\\s+", "_"));
+
+            if (drv != null) {
+                // Attach screenshot bytes to cucumber scenario
+                try {
+                    byte[] screenshot = ((TakesScreenshot) drv).getScreenshotAs(OutputType.BYTES);
+                    scenario.attach(screenshot, "image/png", "Failure Screenshot");
+                } catch (Exception e) {
+                    logger.warn("Failed to attach scenario screenshot bytes: {}", e.getMessage());
+                }
+
+                // Persist screenshot to reports & embed in Extent
+                try {
+                    ExtentTestManager.captureScreenshot(drv, scenario.getName().replaceAll("\\s+", "_"));
+                } catch (Exception e) {
+                    logger.warn("Extent screenshot capture failed: {}", e.getMessage());
+                }
+            } else {
+                ExtentTestManager.logStatus(Status.WARNING, "Driver is null — cannot attach or capture screenshot for failed step.");
+            }
+
             logger.error("Step failed: {}", scenario.getName());
         } else {
             ExtentTestManager.logStatus(Status.PASS, "Step passed");
+            logger.debug("Step passed");
         }
     }
 
@@ -44,7 +67,14 @@ public class Hooks extends BaseTest {
         } else {
             ExtentTestManager.logStatus(Status.PASS, "Scenario passed: " + scenario.getName());
         }
-        tearDown();
+
+        // tear down driver for this thread
+        try {
+            tearDown();
+        } catch (Exception e) {
+            logger.warn("Exception during tearDown(): {}", e.getMessage());
+        }
+
         logger.info("===== Finished Scenario: {} =====", scenario.getName());
     }
 

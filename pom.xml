@@ -1,110 +1,101 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.selenium.bdd</groupId>
-  <artifactId>selenium-bdd-framework</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <name>Archetype - selenium-bdd-framework</name>
-  <url>http://maven.apache.org</url>
-    <dependencies>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.selenium.bdd</groupId>
+    <artifactId>selenium-bdd-framework</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Archetype - selenium-bdd-framework</name>
 
-        <!-- ✅ Cucumber Core -->
+    <properties>
+        <maven.compiler.release>23</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Cucumber -->
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java</artifactId>
-            <version>7.14.0</version>
+            <version>7.29.0</version>
         </dependency>
 
-        <!-- ✅ Cucumber JUnit Platform Engine -->
+        <!-- Cucumber TestNG -->
         <dependency>
             <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-junit-platform-engine</artifactId>
-            <version>7.14.0</version>
-        </dependency>
-
-        <!-- ✅ JUnit 5 API + Engine -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <version>5.10.2</version>
+            <artifactId>cucumber-testng</artifactId>
+            <version>7.29.0</version>
             <scope>test</scope>
         </dependency>
 
+        <!-- TestNG -->
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.10.2</version>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>7.8.0</version>
             <scope>test</scope>
         </dependency>
 
-        <!-- ✅ JUnit Platform Suite -->
-        <dependency>
-            <groupId>org.junit.platform</groupId>
-            <artifactId>junit-platform-suite</artifactId>
-            <version>1.10.2</version>
-        </dependency>
-
-        <!-- ✅ Selenium -->
+        <!-- Selenium -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
-            <version>4.25.0</version>
+            <version>4.36.0</version>
         </dependency>
 
-        <!-- ✅ WebDriverManager -->
+        <!-- WebDriverManager -->
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
             <artifactId>webdrivermanager</artifactId>
-            <version>5.8.0</version>
+            <version>6.3.2</version>
         </dependency>
 
-        <!-- ✅ Extent Reports -->
+        <!-- Extent Reports -->
         <dependency>
             <groupId>com.aventstack</groupId>
             <artifactId>extentreports</artifactId>
             <version>5.1.2</version>
         </dependency>
 
-        <!-- ✅ Log4j -->
+        <!-- Log4j2 -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.25.0</version>
+            <version>2.25.2</version>
         </dependency>
+
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.25.0</version>
+            <version>2.25.2</version>
         </dependency>
 
+        <!-- (Optional) If you use junit artifacts indirectly remove them if present -->
     </dependencies>
 
     <build>
         <plugins>
-
-            <!-- ✅ Java 23 compilation -->
+            <!-- Compiler plugin using Java release property -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.12.1</version>
                 <configuration>
-                    <release>23</release>
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
 
-            <!-- ✅ Surefire for JUnit5 + Cucumber -->
+            <!-- Surefire: Let it auto-detect TestNG -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <!-- remove any Java / JUnit specific includes; allow surefire to detect TestNG -->
                     <useModulePath>false</useModulePath>
-                    <includes>
-                        <include>**/CucumberTestRunner.java</include>
-                    </includes>
                 </configuration>
             </plugin>
-
         </plugins>
     </build>
 </project>

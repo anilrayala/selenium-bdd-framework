@@ -3,99 +3,103 @@ package pages;
 import com.aventstack.extentreports.Status;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
+import org.openqa.selenium.Keys;
 import reports.ExtentTestManager;
-import utils.ConfigReader;
-import utils.RobotUtils;
 
-public class BasicAuthPage {
+/**
+ * BasicAuthPage — actions for the-internet demo pages.
+ * Uses BasePage methods and WaitHelper.
+ */
+public class BasicAuthPage extends BasePage {
 
     private static final Logger logger = LogManager.getLogger(BasicAuthPage.class);
-    private WebDriver driver;
 
-    // Locators
-    private By basicAuthLink = By.xpath("//a[contains(text(),'Basic Auth')]");
+    private final By basicAuthLink = By.xpath("//a[text()='Basic Auth']");
+    private final By addRemoveLink = By.xpath("//a[text()='Add/Remove Elements']");
+    private final By addElementBtn = By.xpath("//button[text()='Add Element']");
+    private final By deleteBtn = By.xpath("//button[text()='Delete']");
 
-    public BasicAuthPage(WebDriver driver) {
-        this.driver = driver;
+    public BasicAuthPage() {
+        super();
     }
 
-    /**
-     * Step 1️⃣ Navigate to main homepage
-     */
     public void openHomePage() {
-        String homeUrl = "https://the-internet.herokuapp.com/";
-        driver.get(homeUrl);
-        ExtentTestManager.logStatus(Status.INFO, "Navigated to home page: " + homeUrl);
-        logger.info("Opened main page: {}", homeUrl);
+        navigateTo("https://the-internet.herokuapp.com/");
+        wait.waitForPageToLoad();
+        ExtentTestManager.logStatus(Status.INFO, "Opened the-internet home page");
+        logger.info("Opened the-internet home page");
     }
 
-    /**
-     * Step 2️⃣ Click on “Basic Auth” link
-     */
     public void clickBasicAuthLink() {
-        try {
-            WebElement link = driver.findElement(basicAuthLink);
-            link.click();
-            ExtentTestManager.logStatus(Status.INFO, "Clicked on 'Basic Auth' link");
-            logger.info("Clicked on Basic Auth link");
-        } catch (Exception e) {
-            ExtentTestManager.logStatus(Status.FAIL, "Failed to click Basic Auth link: " + e.getMessage());
-            logger.error("Error clicking Basic Auth link", e);
-        }
+        click(basicAuthLink); // BasePage.click -> WaitHelper.safeClick
+        logger.info("Clicked Basic Auth link");
     }
 
     /**
-     * Step 3️⃣ Handle authentication popup or URL with credentials
+     * Preferred approach: embed credentials in URL.
+     * Fallback: use alert handling via WaitHelper.waitForAlert()
      */
     public void handleAuthentication(String username, String password) {
-        boolean headless = ConfigReader.getBoolean("headless");
-
-        if (headless) {
-            // Use embedded credentials (for CI/headless mode)
-            openWithEmbeddedCredentials(username, password);
-        } else {
-            // Use Robot to handle popup (for GUI browsers)
-            handlePopupWithRobot(username, password);
-        }
-    }
-
-    /** ✅ Handle popup using Robot */
-    private void handlePopupWithRobot(String username, String password) {
         try {
-            RobotUtils.delay(2000); // Wait for popup
-            RobotUtils.type(username);
-            RobotUtils.pressTab();
-            RobotUtils.type(password);
-            RobotUtils.pressEnter();
-
-            ExtentTestManager.logStatus(Status.INFO, "Entered credentials using Robot");
-            logger.info("Entered credentials using Robot: {} / {}", username, password);
+            String target = "https://" + username + ":" + password + "@the-internet.herokuapp.com/basic_auth";
+            driver.get(target);
+            wait.waitForPageToLoad();
+            ExtentTestManager.logStatus(Status.INFO, "Authenticated using URL embedding");
+            logger.info("Authenticated via URL embedding");
+            return;
         } catch (Exception e) {
-            ExtentTestManager.logStatus(Status.FAIL, "Robot auth failed: " + e.getMessage());
-            logger.error("Robot-based auth failed", e);
+            logger.warn("URL-embedding authentication failed; trying alert fallback: {}", e.getMessage());
         }
-    }
 
-    /** ✅ Handle authentication using embedded credentials */
-    private void openWithEmbeddedCredentials(String username, String password) {
+        // fallback: try alert-based auth (may not work with all browsers)
         try {
-            String authUrl = "https://" + username + ":" + password + "@the-internet.herokuapp.com/basic_auth";
-            driver.get(authUrl);
-            ExtentTestManager.logStatus(Status.INFO, "Opened Basic Auth via embedded credentials");
-            logger.info("Opened Basic Auth via embedded credentials: {}", authUrl);
-        } catch (Exception e) {
-            ExtentTestManager.logStatus(Status.FAIL, "Embedded auth failed: " + e.getMessage());
-            logger.error("Embedded credentials auth failed", e);
+            Alert a = wait.waitForAlert();
+            // Some browsers don't allow entering credentials via alert; if this works:
+            a.sendKeys(username + Keys.TAB + password);
+            a.accept();
+            wait.waitForPageToLoad();
+            ExtentTestManager.logStatus(Status.INFO, "Authenticated via alert sendKeys fallback");
+            logger.info("Authenticated via alert fallback");
+        } catch (Exception ex) {
+            String msg = "Basic Auth fallback failed: " + ex.getMessage();
+            ExtentTestManager.logStatus(Status.WARNING, msg);
+            logger.warn(msg);
+            throw new RuntimeException("Basic Auth failed", ex);
         }
     }
 
-    /** ✅ Return page content for verification */
+    public void clickAddOrRemoveElements() {
+        click(addRemoveLink);
+        logger.info("Clicked Add/Remove Elements link");
+    }
+
+    public void clickOnAddElement() {
+        click(addElementBtn);
+        logger.info("Clicked Add Element");
+    }
+
+    public String getDeleteButtonText() {
+        return getText(deleteBtn);
+    }
+
+    public void clickDeleteButton() {
+        click(deleteBtn);
+    }
+
+    public boolean verifyElementIsDeleted() {
+        try {
+            wait.waitForInvisibility(deleteBtn);
+            logger.info("Delete button invisible => removed");
+            return true;
+        } catch (Exception e) {
+            logger.warn("Delete button still visible");
+            return false;
+        }
+    }
+
     public String getPageContent() {
-        String content = driver.getPageSource();
-        logger.info("Page content length: {}", content.length());
-        return content;
+        return wait.waitForVisibility(By.tagName("body")).getText();
     }
 }

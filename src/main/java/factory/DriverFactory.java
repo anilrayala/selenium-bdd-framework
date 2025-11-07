@@ -1,6 +1,8 @@
 package factory;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -15,11 +17,15 @@ import java.time.Duration;
 public class DriverFactory {
 
     private static final ThreadLocal<WebDriver> driver = new ThreadLocal<>();
+    private static final Logger logger = LogManager.getLogger(DriverFactory.class);
 
     public static WebDriver initializeDriver() {
         if (driver.get() == null) { // ✅ create only once
             String browser = ConfigReader.getProperty("browser").toLowerCase();
             boolean headless = ConfigReader.getBoolean("headless");
+
+            // ✅ Add this line to log which browser is being initialized
+            logger.info("Initializing driver for browser: {}", browser);
 
             switch (browser) {
                 case "firefox":
@@ -55,6 +61,7 @@ public class DriverFactory {
                     Duration.ofSeconds(ConfigReader.getInt("implicitWait")));
             webDriver.manage().timeouts().pageLoadTimeout(
                     Duration.ofSeconds(ConfigReader.getInt("pageLoadTimeout")));
+            logger.info("Driver initialization complete for browser: {}", browser);
         }
 
         return driver.get(); // reuse existing driver
@@ -65,9 +72,19 @@ public class DriverFactory {
     }
 
     public static void quitDriver() {
-        if (driver.get() != null) {
-            driver.get().quit();
-            driver.remove();
+        WebDriver drv = driver.get();
+        if (drv != null) {
+            logger.info("Quitting driver for current thread: {}", drv.getClass().getName());
+            try {
+                drv.quit();
+            } catch (Exception e) {
+                logger.warn("Exception while quitting driver: {}", e.getMessage(), e);
+            } finally {
+                driver.remove();
+            }
+        } else {
+            logger.info("quitDriver() called but driver was already null for this thread.");
         }
     }
+
 }
