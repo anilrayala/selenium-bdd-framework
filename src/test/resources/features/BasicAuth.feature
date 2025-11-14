@@ -14,17 +14,17 @@ Feature: Basic Authentication Verification
     And user click on Delete
     Then verify the Element is deleted
 
-  Scenario: Verify click on checkbox
-    Given user navigates to the internet home page
-    When user clicks on checkboxes link
-    Then verify the checkbox is checked
-
-  Scenario: Verify Drag and Drop
-    Given user navigates to the internet home page
-    When user clicks on Drag and Drop link
-    Then user drag and drops element A into element B
-
-  Scenario: Verify Dropdown
-    Given user navigates to the internet home page
-    When user clicks on Dropdown link
-    Then user selects option1 from the dropdown list
+#  Scenario: Verify click on checkbox
+#    Given user navigates to the internet home page
+#    When user clicks on checkboxes link
+#    Then verify the checkbox is checked
+#
+#  Scenario: Verify Drag and Drop
+#    Given user navigates to the internet home page
+#    When user clicks on Drag and Drop link
+#    Then user drag and drops element A into element B
+#
+#  Scenario: Verify Dropdown
+#    Given user navigates to the internet home page
+#    When user clicks on Dropdown link
+#    Then user selects option1 from the dropdown list

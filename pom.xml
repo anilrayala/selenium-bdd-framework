@@ -92,8 +92,14 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <!-- remove any Java / JUnit specific includes; allow surefire to detect TestNG -->
+                    <!-- Use our testng.xml suite file -->
+                    <suiteXmlFiles>
+                        <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+
+                    <!-- keep previous config you had: example include runner if needed -->
                     <useModulePath>false</useModulePath>
+                    <!-- optional: increase forked JVM memory or reuseForks config here -->
                 </configuration>
             </plugin>
         </plugins>

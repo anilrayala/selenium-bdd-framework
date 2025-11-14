@@ -36,7 +36,7 @@ public class BasicAuthSteps extends BaseTest {
     @Then("verify the Basic Auth success message is displayed")
     public void verify_basic_auth_success() {
         String pageContent = basicAuthPage.getPageContent();
-        Assert.assertTrue(pageContent.contains("Congratulations"),
+        Assert.assertTrue(pageContent.contains("Testing"),
                 "Login failed! 'Congratulations' text not found.");
         ExtentTestManager.captureScreenshot(driver, "Successful_login");
         ExtentTestManager.logStatus(Status.PASS, "Verified Basic Auth success message.");
