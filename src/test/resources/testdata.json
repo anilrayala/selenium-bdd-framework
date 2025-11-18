@@ -1,0 +1,9 @@
+{
+  "login": {
+    "username": "testuser",
+    "password": "securePass123"
+  },
+  "googleSearch": {
+    "query": "Selenium WebDriver"
+  }
+}

@@ -3,6 +3,7 @@ package reports;
 import com.aventstack.extentreports.ExtentReports;
 import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.Status;
+import org.json.JSONObject;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
@@ -12,8 +13,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 
 public class ExtentTestManager {
 
@@ -117,11 +120,22 @@ public class ExtentTestManager {
 
     public static synchronized void addSummary() {
         ExtentTest summary = extent.createTest("📊 Test Summary");
+        try {
+            Path reportsDir = Path.of(System.getProperty("user.dir"), "reports");
+            Files.createDirectories(reportsDir);
+            Path out = reportsDir.resolve("summary.json");
+            JSONObject obj = new JSONObject(Map.of("passed", passCount, "failed", failCount, "skipped", skipCount));
+            Files.writeString(out, obj.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            summary.log(Status.INFO, "Summary JSON written to: " + out.toAbsolutePath());
+        } catch (IOException e) {
+            summary.log(Status.WARNING, "Unable to write summary.json: " + e.getMessage());
+        }
         summary.log(Status.INFO, "✅ Passed: " + passCount);
         summary.log(Status.INFO, "❌ Failed: " + failCount);
         summary.log(Status.INFO, "⚠️ Skipped: " + skipCount);
         extent.flush();
     }
+
 
     public static ExtentReports getExtent() {
         return extent;

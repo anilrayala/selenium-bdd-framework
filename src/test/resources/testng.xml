@@ -2,7 +2,7 @@
 <suite name="Selenium-Cucumber-Suite"
        verbose="10"
        preserve-order="true"
-       data-provider-thread-count="2"
+       data-provider-thread-count="1"
        parallel="tests"> <!-- <- limit threads here -->
 
     <!-- listeners -->

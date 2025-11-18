@@ -10,11 +10,28 @@ public class ConfigReader {
 
     public static void loadConfig() {
         prop = new Properties();
-        try (FileInputStream fis = new FileInputStream("src/main/resources/config.properties")) {
-            prop.load(fis);
+        try {
+            // ✅ Determine environment (default: qa)
+            String env = System.getProperty("env", "qa");
+            String configPath = "src/main/resources/config-" + env + ".properties";
+
+            try (FileInputStream fis = new FileInputStream(configPath)) {
+                prop.load(fis);
+            }
+
+            // ✅ Load environment variables for sensitive data
+            String apiKey = System.getenv("API_KEY");
+            if (apiKey != null) {
+                prop.setProperty("apiKey", apiKey);
+            }
+
+            String dbPassword = System.getenv("DB_PASSWORD");
+            if (dbPassword != null) {
+                prop.setProperty("dbPassword", dbPassword);
+            }
+
         } catch (IOException e) {
-            System.out.println("❌ Failed to load config.properties: " + e.getMessage());
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to load config for environment: " + e.getMessage(), e);
         }
     }
 

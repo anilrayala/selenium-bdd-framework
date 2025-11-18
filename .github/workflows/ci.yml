@@ -1,0 +1,110 @@
+name: CI - Selenium BDD
+
+# Trigger on pushes and pull requests to main (adjust branch names as needed)
+on:
+  push:
+    branches:
+        - main
+  pull_request:
+    branches:
+        - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Matrix: you can expand Java versions or browsers later
+    strategy:
+      matrix:
+        java: [23]
+        # we keep browser matrix simple; tests are headless by default in your configs
+        browser: [chrome]
+      fail-fast: false
+
+    env:
+      # Make sure to export these if your ConfigReader uses System properties or env vars.
+      # We pass env to maven via -Denv (see mvn command below).
+      MAVEN_OPTS: -Xmx2g
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: 'maven'
+
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
+
+      # Install browsers (chromium) so WebDriverManager/ChromeDriver can find a browser.
+      # On ubuntu-latest, chromium is available via apt. This is a simple approach for headless tests.
+      - name: Install dependencies (chromium)
+        if: matrix.browser == 'chrome'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+          # Make sure 'chromium-browser' is in PATH and accessible.
+          chromium-browser --version || true
+
+      # Optionally install Firefox (uncomment if you add firefox to matrix)
+      # - name: Install Firefox
+      #   if: matrix.browser == 'firefox'
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y firefox
+      #     firefox --version || true
+
+      - name: Show Java & Maven versions
+        run: |
+          java -version
+          mvn -v
+
+      # Run tests with Maven. We set -Denv so your ConfigReader picks config-<env>.properties
+      - name: Run tests (mvn test)
+        env:
+          # pass secret environment variables to the build (configure them in repo settings)
+          API_KEY: ${{ secrets.API_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          # Use -B for non-interactive/batch mode and print useful logs
+          mvn -B -Denv=qa -DretryCount=1 test
+
+      - name: Create reports folder if missing
+        run: |
+          mkdir -p reports
+
+      # Upload test artifacts (reports, screenshots, and the summary.json you added)
+      - name: Upload test reports artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            reports/**
+            target/cucumber.json
+            target/cucumber-reports.html
+            target/*.log
+            # your generated summary.json
+            reports/summary.json
+
+      # Optional: generate Allure report if you have allure-maven plugin configured
+      - name: Generate Allure report (optional)
+        if: success() && always() # run after tests; remove if you don't use allure plugin
+        run: |
+          # This uses the allure maven plugin configured in your pom.xml
+          mvn allure:report || echo "Allure report generation failed - check plugin setup"
+
+      - name: Upload Allure report as artifact (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: target/site/allure-maven-plugin/**

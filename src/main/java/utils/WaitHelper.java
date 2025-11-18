@@ -76,6 +76,37 @@ public class WaitHelper {
         return performWait(ExpectedConditions.urlContains(urlPart));
     }
 
+    public java.util.List<WebElement> waitForAllPresence(By locator) {
+        logAction("Waiting for presence of all elements: " + locator);
+        return performWait(ExpectedConditions.presenceOfAllElementsLocatedBy(locator));
+    }
+
+    public boolean waitForElementToBeStable(By locator, int stableMillis, int pollMillis, int timeoutSec) {
+        long end = System.currentTimeMillis() + timeoutSec * 1000L;
+        long stableUntil = 0;
+        String lastSnapshot = null;
+        while (System.currentTimeMillis() < end) {
+            try {
+                WebElement el = driver.findElement(locator);
+                String snapshot = ((JavascriptExecutor) driver).executeScript(
+                        "return arguments[0].outerHTML;", el).toString();
+                if (lastSnapshot != null && snapshot.equals(lastSnapshot)) {
+                    if (stableUntil == 0) stableUntil = System.currentTimeMillis() + stableMillis;
+                    if (System.currentTimeMillis() >= stableUntil) return true;
+                } else {
+                    stableUntil = 0;
+                }
+                lastSnapshot = snapshot;
+            } catch (Exception ignored) {
+                stableUntil = 0;
+                lastSnapshot = null;
+            }
+            sleep(pollMillis);
+        }
+        return false;
+    }
+
+
     /* ---------- Advanced / Custom Waits ---------- */
 
     public boolean waitForTextToBe(By locator, String expectedText) {
