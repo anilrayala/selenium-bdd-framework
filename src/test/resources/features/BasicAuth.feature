@@ -1,5 +1,6 @@
 Feature: Basic Authentication Verification
 
+  @smoke
   Scenario: Verify login via Basic Auth popup
     Given user navigates to the internet home page
     When user clicks on the Basic Auth link

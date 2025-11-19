@@ -1,30 +1,35 @@
 name: CI - Selenium BDD
 
-# Trigger on pushes and pull requests to main (adjust branch names as needed)
 on:
   push:
-    branches:
-        - main
+    branches: [ main ]
   pull_request:
-    branches:
-        - main
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Environment to run tests'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+      cucumberTags:
+        description: 'Cucumber tags to run (optional)'
+        required: false
+        default: ''
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env }}
 
-    # Matrix: you can expand Java versions or browsers later
     strategy:
       matrix:
         java: [23]
-        # we keep browser matrix simple; tests are headless by default in your configs
-        browser: [chrome]
       fail-fast: false
-
-    env:
-      # Make sure to export these if your ConfigReader uses System properties or env vars.
-      # We pass env to maven via -Denv (see mvn command below).
-      MAVEN_OPTS: -Xmx2g
 
     steps:
       - name: Checkout repository
@@ -37,74 +42,94 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'maven'
 
-      - name: Cache Maven local repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
-
-      # Install browsers (chromium) so WebDriverManager/ChromeDriver can find a browser.
-      # On ubuntu-latest, chromium is available via apt. This is a simple approach for headless tests.
-      - name: Install dependencies (chromium)
-        if: matrix.browser == 'chrome'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
-          # Make sure 'chromium-browser' is in PATH and accessible.
-          chromium-browser --version || true
-
-      # Optionally install Firefox (uncomment if you add firefox to matrix)
-      # - name: Install Firefox
-      #   if: matrix.browser == 'firefox'
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y firefox
-      #     firefox --version || true
-
-      - name: Show Java & Maven versions
+      - name: Show Java & Maven
         run: |
           java -version
           mvn -v
 
-      # Run tests with Maven. We set -Denv so your ConfigReader picks config-<env>.properties
-      - name: Run tests (mvn test)
+      - name: Detect browser from config and install it
+        # this step reads src/main/resources/config-<env>.properties to find browser=...
+        run: |
+          set -e
+          CONFIG_FILE="src/main/resources/config-${{ github.event.inputs.env }}.properties"
+          echo "Checking config file: $CONFIG_FILE"
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "Config file not found -> defaulting to chrome"
+            BROWSER="chrome"
+          else
+            BROWSER=$(grep -E '^browser=' "$CONFIG_FILE" | cut -d'=' -f2 | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+            if [ -z "$BROWSER" ]; then
+              echo "No browser entry found in config file -> defaulting to chrome"
+              BROWSER="chrome"
+            fi
+          fi
+          echo "Detected browser: $BROWSER"
+
+          if [ "$BROWSER" = "chrome" ] || [ "$BROWSER" = "chromium" ]; then
+            echo "Installing chromium-browser..."
+            sudo apt-get update
+            sudo apt-get install -y chromium-browser
+            chromium-browser --version || true
+
+          elif [ "$BROWSER" = "edge" ] || [ "$BROWSER" = "microsoft-edge" ]; then
+            echo "Installing Microsoft Edge (stable)..."
+            sudo apt-get update
+            sudo apt-get install -y wget gnupg apt-transport-https ca-certificates
+            # Add Microsoft apt key and repo
+            wget -q -O - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+            sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
+            sudo apt-get update
+            sudo apt-get install -y microsoft-edge-stable
+            microsoft-edge --version || true
+
+          elif [ "$BROWSER" = "firefox" ]; then
+            echo "Installing Firefox..."
+            sudo apt-get update
+            sudo apt-get install -y firefox
+            firefox --version || true
+
+          else
+            echo "Unknown browser '$BROWSER' - defaulting to chromium-browser"
+            sudo apt-get update
+            sudo apt-get install -y chromium-browser
+            chromium-browser --version || true
+          fi
+        shell: bash
+
+      - name: Run tests (mvn)
         env:
-          # pass secret environment variables to the build (configure them in repo settings)
           API_KEY: ${{ secrets.API_KEY }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          # Use -B for non-interactive/batch mode and print useful logs
-          mvn -B -Denv=qa -DretryCount=1 test
+          echo "Running tests for env=${{ github.event.inputs.env }}"
+          # Pass cucumber tags only if provided
+          if [ -z "${{ github.event.inputs.cucumberTags }}" ]; then
+            mvn -B -Denv=${{ github.event.inputs.env }} -DretryCount=1 test
+          else
+            mvn -B -Denv=${{ github.event.inputs.env }} -Dcucumber.filter.tags="${{ github.event.inputs.cucumberTags }}" -DretryCount=1 test
+          fi
 
-      - name: Create reports folder if missing
-        run: |
-          mkdir -p reports
+      - name: Ensure reports folder exists
+        run: mkdir -p reports
 
-      # Upload test artifacts (reports, screenshots, and the summary.json you added)
-      - name: Upload test reports artifact
+      - name: Upload artifacts (reports + summary)
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-${{ github.event.inputs.env }}
           path: |
             reports/**
             target/cucumber.json
             target/cucumber-reports.html
-            target/*.log
-            # your generated summary.json
             reports/summary.json
 
-      # Optional: generate Allure report if you have allure-maven plugin configured
       - name: Generate Allure report (optional)
-        if: success() && always() # run after tests; remove if you don't use allure plugin
+        if: success()
         run: |
-          # This uses the allure maven plugin configured in your pom.xml
-          mvn allure:report || echo "Allure report generation failed - check plugin setup"
+          mvn allure:report || echo "Allure plugin not configured or failed"
 
-      - name: Upload Allure report as artifact (optional)
+      - name: Upload Allure report (optional)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
+          name: allure-report-${{ github.event.inputs.env }}
           path: target/site/allure-maven-plugin/**
