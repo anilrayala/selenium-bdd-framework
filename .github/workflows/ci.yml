@@ -24,7 +24,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    # fallback to 'qa' so environment secrets/approvals apply predictably
+
+    # Fallback to QA automatically for push/PR triggers
     environment: ${{ github.event.inputs.env || 'qa' }}
 
     strategy:
@@ -49,49 +50,50 @@ jobs:
           mvn -v
 
       - name: Detect browser from config and install it
-        # this step reads src/main/resources/config-<env>.properties to find browser=...
         run: |
           set -e
+
           CONFIG_FILE="src/main/resources/config-${{ github.event.inputs.env }}.properties"
           echo "Checking config file: $CONFIG_FILE"
+
           if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config file not found -> defaulting to chrome"
+            echo "Config not found -> default chrome"
             BROWSER="chrome"
           else
             BROWSER=$(grep -E '^browser=' "$CONFIG_FILE" | cut -d'=' -f2 | tr -d '\r' | tr '[:upper:]' '[:lower:]')
             if [ -z "$BROWSER" ]; then
-              echo "No browser entry found in config file -> defaulting to chrome"
+              echo "browser= not set -> default chrome"
               BROWSER="chrome"
             fi
           fi
+
           echo "Detected browser: $BROWSER"
 
           if [ "$BROWSER" = "chrome" ] || [ "$BROWSER" = "chromium" ]; then
-            echo "Installing chromium-browser..."
-            sudo apt-get update
+            echo "Installing chromium"
+            sudo apt-get update -y
             sudo apt-get install -y chromium-browser
             chromium-browser --version || true
 
           elif [ "$BROWSER" = "edge" ] || [ "$BROWSER" = "microsoft-edge" ]; then
-            echo "Installing Microsoft Edge (stable)..."
-            sudo apt-get update
+            echo "Installing Microsoft Edge"
+            sudo apt-get update -y
             sudo apt-get install -y wget gnupg apt-transport-https ca-certificates
-            # Add Microsoft apt key and repo
             wget -q -O - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-            sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge.list'
-            sudo apt-get update
+            echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" | sudo tee /etc/apt/sources.list.d/microsoft-edge.list
+            sudo apt-get update -y
             sudo apt-get install -y microsoft-edge-stable
             microsoft-edge --version || true
 
           elif [ "$BROWSER" = "firefox" ]; then
-            echo "Installing Firefox..."
-            sudo apt-get update
+            echo "Installing Firefox"
+            sudo apt-get update -y
             sudo apt-get install -y firefox
             firefox --version || true
 
           else
-            echo "Unknown browser '$BROWSER' - defaulting to chromium-browser"
-            sudo apt-get update
+            echo "Unknown browser '$BROWSER' -> using chromium"
+            sudo apt-get update -y
             sudo apt-get install -y chromium-browser
             chromium-browser --version || true
           fi
@@ -108,8 +110,10 @@ jobs:
           TAGS="${{ github.event.inputs.cucumberTags || '' }}"
 
           echo "Running tests for env='${ENV_TO_USE}' (event='${{ github.event_name }}')"
+
+          # Prevent accidental prod runs on push/PR
           if [ "${ENV_TO_USE}" = "prod" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "Refusing to run prod on automatic event='${{ github.event_name }}'. Use manual Run workflow and approvals."
+            echo "❌ Blocking prod run outside manual trigger!"
             exit 1
           fi
 
@@ -122,34 +126,44 @@ jobs:
       - name: Ensure reports folder exists
         run: mkdir -p reports
 
-      - name: Upload artifacts (reports + summary)
+      - name: Upload Extent + Summary artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports-${{ github.event.inputs.env }}
+          name: test-reports-${{ github.event.inputs.env || 'qa' }}
           path: |
             reports/**
             target/cucumber.json
             target/cucumber-reports.html
             reports/summary.json
 
-      - name: Install Allure CLI
-        # ensures the Allure commandline is available so Maven plugin can generate a full site
-        uses: allure-framework/allure-commandline@v2
-        with:
-          version: '2.22.1'
+      - name: Install Allure CLI (official release)
+        run: |
+          set -e
+          ALLURE_VERSION="2.22.1"
+          echo "Installing Allure CLI ${ALLURE_VERSION}"
+          sudo apt-get update -y
+          sudo apt-get install -y wget unzip
+          wget -q -O allure.zip "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.zip"
+          unzip -q allure.zip -d allure_tmp
+          sudo mv "allure_tmp/allure-${ALLURE_VERSION}" /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+          rm -rf allure.zip allure_tmp
+          echo "Installed:"
+          allure --version
+        shell: bash
 
       - name: Generate Allure report
         if: always()
         run: |
           set -e
-          # attempt to generate the report (will fail/echo if no results)
-          mvn -B allure:report || echo "Allure plugin not configured or failed"
+          echo "Generating Allure report..."
+          mvn -B allure:report || echo "⚠️ Allure generation failed"
 
-      - name: Upload Allure report
+      - name: Upload Allure report (HTML + raw JSON results)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report-${{ github.event.inputs.env }}
+          name: allure-report-${{ github.event.inputs.env || 'qa' }}
           path: |
             target/site/allure-maven-plugin/**
             target/allure-results/**
