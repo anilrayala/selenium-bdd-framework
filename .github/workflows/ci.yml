@@ -24,8 +24,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
-    # Fallback to QA automatically for push/PR triggers
     environment: ${{ github.event.inputs.env || 'qa' }}
 
     strategy:
@@ -52,10 +50,8 @@ jobs:
       - name: Detect browser from config and install it
         run: |
           set -e
-
           CONFIG_FILE="src/main/resources/config-${{ github.event.inputs.env }}.properties"
           echo "Checking config file: $CONFIG_FILE"
-
           if [ ! -f "$CONFIG_FILE" ]; then
             echo "Config not found -> default chrome"
             BROWSER="chrome"
@@ -66,17 +62,13 @@ jobs:
               BROWSER="chrome"
             fi
           fi
-
           echo "Detected browser: $BROWSER"
 
           if [ "$BROWSER" = "chrome" ] || [ "$BROWSER" = "chromium" ]; then
-            echo "Installing chromium"
             sudo apt-get update -y
             sudo apt-get install -y chromium-browser
             chromium-browser --version || true
-
           elif [ "$BROWSER" = "edge" ] || [ "$BROWSER" = "microsoft-edge" ]; then
-            echo "Installing Microsoft Edge"
             sudo apt-get update -y
             sudo apt-get install -y wget gnupg apt-transport-https ca-certificates
             wget -q -O - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
@@ -84,15 +76,11 @@ jobs:
             sudo apt-get update -y
             sudo apt-get install -y microsoft-edge-stable
             microsoft-edge --version || true
-
           elif [ "$BROWSER" = "firefox" ]; then
-            echo "Installing Firefox"
             sudo apt-get update -y
             sudo apt-get install -y firefox
             firefox --version || true
-
           else
-            echo "Unknown browser '$BROWSER' -> using chromium"
             sudo apt-get update -y
             sudo apt-get install -y chromium-browser
             chromium-browser --version || true
@@ -136,28 +124,13 @@ jobs:
             target/cucumber-reports.html
             reports/summary.json
 
-      - name: Install Allure CLI (official release)
-        run: |
-          set -e
-          ALLURE_VERSION="2.22.1"
-          echo "Installing Allure CLI ${ALLURE_VERSION}"
-          sudo apt-get update -y
-          sudo apt-get install -y wget unzip
-          wget -q -O allure.zip "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.zip"
-          unzip -q allure.zip -d allure_tmp
-          sudo mv "allure_tmp/allure-${ALLURE_VERSION}" /opt/allure
-          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
-          rm -rf allure.zip allure_tmp
-          echo "Installed:"
-          allure --version
-        shell: bash
-
-      - name: Generate Allure report
+      - name: Generate Allure report (Maven plugin)
         if: always()
         run: |
           set -e
           echo "Generating Allure report..."
-          mvn -B allure:report || echo "⚠️ Allure generation failed"
+          # allure.results.directory is set by surefire pom config to target/allure-results
+          mvn -B allure:report || echo "⚠️ Allure generation failed (no results or plugin issue)"
 
       - name: Upload Allure report (HTML + raw JSON results)
         if: always()

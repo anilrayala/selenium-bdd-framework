@@ -118,6 +118,10 @@
                     </suiteXmlFiles>
 
                     <useModulePath>false</useModulePath>
+                    <!-- ENSURE Allure writes results under target/allure-results -->
+                    <systemPropertyVariables>
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                    </systemPropertyVariables>
                     <!-- Optional: forward common system properties to forked JVMs if needed
                     <systemPropertyVariables>
                         <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
