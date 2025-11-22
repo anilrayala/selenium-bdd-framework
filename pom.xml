@@ -71,21 +71,27 @@
             <version>2.25.2</version>
         </dependency>
 
+        <!-- Allure Cucumber adapter -->
         <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-cucumber7-jvm</artifactId>
             <version>2.30.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.json/json -->
+        <!-- Allure lifecycle / commons (required for writing results & report generation) -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-java-commons</artifactId>
+            <version>2.30.0</version>
+        </dependency>
+
+        <!-- JSON lib -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20250517</version>
         </dependency>
 
-
-        <!-- (Optional) If you use junit artifacts indirectly remove them if present -->
     </dependencies>
 
     <build>
@@ -111,9 +117,13 @@
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
 
-                    <!-- keep previous config you had: example include runner if needed -->
                     <useModulePath>false</useModulePath>
-                    <!-- optional: increase forked JVM memory or reuseForks config here -->
+                    <!-- Optional: forward common system properties to forked JVMs if needed
+                    <systemPropertyVariables>
+                        <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+                        <env>${env}</env>
+                    </systemPropertyVariables>
+                    -->
                 </configuration>
             </plugin>
 
@@ -143,6 +153,5 @@
 
         </plugins>
     </build>
-
 
 </project>

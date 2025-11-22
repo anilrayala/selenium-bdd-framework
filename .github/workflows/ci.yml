@@ -24,7 +24,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.env }}
+    # fallback to 'qa' so environment secrets/approvals apply predictably
+    environment: ${{ github.event.inputs.env || 'qa' }}
 
     strategy:
       matrix:
@@ -131,14 +132,24 @@ jobs:
             target/cucumber-reports.html
             reports/summary.json
 
-      - name: Generate Allure report (optional)
-        if: success()
-        run: |
-          mvn allure:report || echo "Allure plugin not configured or failed"
+      - name: Install Allure CLI
+        # ensures the Allure commandline is available so Maven plugin can generate a full site
+        uses: allure-framework/allure-commandline@v2
+        with:
+          version: '2.22.1'
 
-      - name: Upload Allure report (optional)
+      - name: Generate Allure report
+        if: always()
+        run: |
+          set -e
+          # attempt to generate the report (will fail/echo if no results)
+          mvn -B allure:report || echo "Allure plugin not configured or failed"
+
+      - name: Upload Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report-${{ github.event.inputs.env }}
-          path: target/site/allure-maven-plugin/**
+          path: |
+            target/site/allure-maven-plugin/**
+            target/allure-results/**

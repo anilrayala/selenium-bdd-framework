@@ -3,6 +3,7 @@ package stepDefinitions;
 import base.BaseTest;
 import com.aventstack.extentreports.Status;
 import io.cucumber.java.*;
+import io.qameta.allure.Allure;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -14,11 +15,7 @@ import factory.DriverFactory;
 import utils.ConfigReader;
 import utils.RetryStorage;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.format.DateTimeFormatter;
-import java.time.LocalDateTime;
+import java.io.ByteArrayInputStream;
 
 public class Hooks extends BaseTest {
 
@@ -43,20 +40,37 @@ public class Hooks extends BaseTest {
         if (scenario.isFailed()) {
             ExtentTestManager.logStatus(Status.FAIL, "Step failed");
 
-            // ✅ Attach screenshot to Allure
-            if (drv != null && drv instanceof TakesScreenshot) {
-                byte[] screenshot = ((TakesScreenshot) drv).getScreenshotAs(OutputType.BYTES);
-                scenario.attach(screenshot, "image/png", "Failure Screenshot");
+            try {
+                if (drv != null && drv instanceof TakesScreenshot ts) {
+                    byte[] screenshot = ts.getScreenshotAs(OutputType.BYTES);
+
+                    // 1️⃣ Attach screenshot to Cucumber (as you already do)
+                    scenario.attach(screenshot, "image/png", "Failure Screenshot");
+
+                    // 2️⃣ Attach screenshot to Allure (reliable method)
+                    Allure.addAttachment(
+                            "Failure Screenshot",
+                            "image/png",
+                            new ByteArrayInputStream(screenshot),
+                            "png"
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Allure/Cucumber screenshot capture failed: {}", e.getMessage());
             }
 
-            // ✅ Preserve your existing logic for Extent + retry screenshot persistence
+            // 3️⃣ Screenshot for Extent + Retry System
             try {
                 if (drv != null) {
-                    ExtentTestManager.captureScreenshot(drv, scenario.getName().replaceAll("\\s+", "_"));
+                    ExtentTestManager.captureScreenshot(
+                            drv,
+                            scenario.getName().replaceAll("\\s+", "_")
+                    );
                 }
             } catch (Exception e) {
                 logger.warn("Extent screenshot capture failed: {}", e.getMessage());
             }
+
         } else {
             ExtentTestManager.logStatus(Status.PASS, "Step passed");
         }
