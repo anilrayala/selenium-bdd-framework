@@ -101,12 +101,21 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          echo "Running tests for env=${{ github.event.inputs.env }}"
-          # Pass cucumber tags only if provided
-          if [ -z "${{ github.event.inputs.cucumberTags }}" ]; then
-            mvn -B -Denv=${{ github.event.inputs.env }} -DretryCount=1 test
+          set -euo pipefail
+
+          ENV_TO_USE="${{ github.event.inputs.env || 'qa' }}"
+          TAGS="${{ github.event.inputs.cucumberTags || '' }}"
+
+          echo "Running tests for env='${ENV_TO_USE}' (event='${{ github.event_name }}')"
+          if [ "${ENV_TO_USE}" = "prod" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "Refusing to run prod on automatic event='${{ github.event_name }}'. Use manual Run workflow and approvals."
+            exit 1
+          fi
+
+          if [ -z "${TAGS}" ]; then
+            mvn -B -Denv="${ENV_TO_USE}" -DretryCount=1 test
           else
-            mvn -B -Denv=${{ github.event.inputs.env }} -Dcucumber.filter.tags="${{ github.event.inputs.cucumberTags }}" -DretryCount=1 test
+            mvn -B -Denv="${ENV_TO_USE}" -Dcucumber.filter.tags="${TAGS}" -DretryCount=1 test
           fi
 
       - name: Ensure reports folder exists
