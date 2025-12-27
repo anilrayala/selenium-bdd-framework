@@ -3,6 +3,7 @@ package pages;
 import factory.DriverFactory;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import utils.WaitHelper;
 
 /**
@@ -29,6 +30,10 @@ public abstract class BasePage {
         wait.safeClick(locator);
     }
 
+    protected void jsClick(By locator) {
+        wait.jsClick(locator);
+    }
+
     protected void type(By locator, String text) {
         wait.safeType(locator, text);
     }
@@ -43,6 +48,10 @@ public abstract class BasePage {
 
     protected void navigateTo(String url) {
         driver.get(url);
+    }
+
+    protected WebElement waitForVisibility(By locator) {
+        return wait.waitForVisibility(locator);
     }
 
 }

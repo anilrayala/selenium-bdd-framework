@@ -229,19 +229,36 @@ public class WaitHelper {
     /* ---------- Safe actions with retries ---------- */
 
     public void safeClick(By locator) {
-        int retries = 2;
-        while (retries-- > 0) {
-            try {
-                waitForClickable(locator).click();
-                logAction("Safely clicked: " + locator);
-                return;
-            } catch (StaleElementReferenceException e) {
-                logAction("Retrying click due to stale element: " + locator);
-            } catch (Exception e) {
-                logAction("Retrying click after failure: " + locator);
-            }
+        try {
+            waitForClickable(locator).click();
+            logAction("Clicked element: " + locator);
+        } catch (Exception e) {
+            logAction("Click failed for locator: " + locator + " | Reason: " + e.getMessage());
+            throw e;
         }
-        throw new RuntimeException("Failed to click after retries: " + locator);
+    }
+
+    public void jsClick(By locator) {
+        try {
+            WebElement element = waitForVisibility(locator);
+
+//            // Scroll element to center of viewport
+//            ((JavascriptExecutor) driver)
+//                    .executeScript(
+//                            "arguments[0].scrollIntoView({block:'center', inline:'center'});",
+//                            element
+//                    );
+            // Perform JavaScript click
+            ((JavascriptExecutor) driver)
+                    .executeScript("arguments[0].click();", element);
+
+            logAction("Clicked element using JavaScript (centered): " + locator);
+
+        } catch (Exception e) {
+            logAction("JavaScript click failed for locator: " + locator
+                    + " | Reason: " + e.getMessage());
+            throw e;
+        }
     }
 
     public void safeType(By locator, String text) {
