@@ -27,13 +27,12 @@ public class BasicAuthPage extends BasePage {
 
     public void openHomePage() {
         navigateTo("https://the-internet.herokuapp.com/");
-        wait.waitForPageToLoad();
         ExtentTestManager.logStatus(Status.INFO, "Opened the-internet home page");
         logger.info("Opened the-internet home page");
     }
 
     public void clickBasicAuthLink() {
-        click(basicAuthLink); // BasePage.click -> WaitHelper.safeClick
+        click(basicAuthLink);
         logger.info("Clicked Basic Auth link");
     }
 

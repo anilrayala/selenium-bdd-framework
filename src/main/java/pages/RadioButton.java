@@ -4,7 +4,6 @@ import com.aventstack.extentreports.Status;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
 import reports.ExtentTestManager;
 
 public class RadioButton extends BasePage {
@@ -25,29 +24,27 @@ public class RadioButton extends BasePage {
         ExtentTestManager.logStatus(Status.INFO, "Opening RadioButton page");
         String url = "https://demoqa.com/radio-button";
         navigateTo(url);
-        waitForPageLoad();
     }
 
     public void clickYesRadio() {
         ExtentTestManager.logStatus(Status.INFO, "Clicking Yes radio button");
-        jsClick(yesRadio);
+        click(yesRadio);
     }
 
     public void clickImpressiveRadio() {
         ExtentTestManager.logStatus(Status.INFO, "Clicking Impressive radio button");
-        jsClick(impressiveRadio);
+        click(impressiveRadio);
     }
 
     public String getSuccessText() {
-        String text = waitForVisibility(successText).getText();
+        String text = getText(successText);
         ExtentTestManager.logStatus(Status.INFO, "Success text displayed: " + text);
         return text;
     }
 
     public boolean isNoRadioDisabled() {
-        WebElement element = waitForVisibility(noRadio);
-        boolean disabled = !element.isEnabled();
-        ExtentTestManager.logStatus(Status.INFO, "No radio button disabled: " + disabled);
+        boolean disabled = !isEnabled(noRadio);
+        ExtentTestManager.logStatus(Status.INFO, "No radio button is disabled: " + disabled);
         return disabled;
     }
 }

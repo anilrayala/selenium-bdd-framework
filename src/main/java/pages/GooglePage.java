@@ -19,7 +19,6 @@ public class GooglePage extends BasePage {
     public void openGoogleHomePage() {
         String url = "https://www.google.com";
         navigateTo(url);
-        wait.waitForPageToLoad();
         ExtentTestManager.logStatus(Status.INFO, "Navigated to: " + url);
         logger.info("Navigated to: {}", url);
     }

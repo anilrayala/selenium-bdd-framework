@@ -30,41 +30,40 @@ public class TextBox extends BasePage {
         ExtentTestManager.logStatus(Status.INFO, "Opening TextBox page");
         String url = "https://demoqa.com/text-box";
         navigateTo(url);
-        waitForPageLoad();
     }
 
     public void enterFullName(String value) {
         logger.info("Entering full name");
         ExtentTestManager.logStatus(Status.INFO, "Entering Full Name: " + value);
 
-        type(fullName, value);
+        sendKeys(fullName, value);
     }
 
     public void enterEmail(String value) {
         logger.info("Entering email");
         ExtentTestManager.logStatus(Status.INFO, "Entering Email: " + value);
 
-        type(email, value);
+        sendKeys(email, value);
     }
 
     public void enterCurrentAddress(String value) {
         logger.info("Entering current address");
         ExtentTestManager.logStatus(Status.INFO, "Entering Current Address");
 
-        type(currentAddress, value);
+        sendKeys(currentAddress, value);
     }
 
     public void enterPermanentAddress(String value) {
         logger.info("Entering permanent address");
         ExtentTestManager.logStatus(Status.INFO, "Entering Permanent Address");
 
-        type(permanentAddress, value);
+        sendKeys(permanentAddress, value);
     }
 
     public void clickSubmit() {
         logger.info("Clicking Submit button");
         ExtentTestManager.logStatus(Status.INFO, "Clicking Submit button");
-        jsClick(submit);
+        click(submit);
     }
 
     public String getDisplayedName() {

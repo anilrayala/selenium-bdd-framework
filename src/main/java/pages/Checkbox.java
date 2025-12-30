@@ -28,35 +28,34 @@ public class Checkbox extends BasePage {
         ExtentTestManager.logStatus(Status.INFO, "Opening Checkbox page");
         String url = "https://demoqa.com/checkbox";
         navigateTo(url);
-        waitForPageLoad();
     }
 
     public void expandHomeAndDesktop() {
         ExtentTestManager.logStatus(Status.INFO, "Expanding Home and Desktop toggles");
-        jsClick(homeToggle);
-        jsClick(desktopToggle);
+        click(homeToggle);
+        click(desktopToggle);
     }
 
     public void selectCommandsCheckbox() {
         ExtentTestManager.logStatus(Status.INFO, "Selecting Commands checkbox");
-        jsClick(commandsCheckbox);
+        click(commandsCheckbox);
     }
 
     public String getCommandsText() {
-        String text = waitForVisibility(commandsText).getText();
+        String text = getText(commandsText);
         ExtentTestManager.logStatus(Status.INFO, "Commands text displayed: " + text);
         return text;
     }
 
     public void expandDocumentsAndSelectReact() {
         ExtentTestManager.logStatus(Status.INFO, "Expanding Documents toggle and selecting React");
-        jsClick(documentsToggle);
-        jsClick(workspaceToggle);
-        jsClick(reactCheckbox);
+        click(documentsToggle);
+        click(workspaceToggle);
+        click(reactCheckbox);
     }
 
     public String getReactText() {
-        String text = waitForVisibility(reactText).getText();
+        String text = getText(reactText);
         ExtentTestManager.logStatus(Status.INFO, "React text displayed: " + text);
         return text;
     }
