@@ -46,10 +46,12 @@ public abstract class BasePage {
                     "Clicked element using normal click: " + locator
             );
         } catch (Exception e) {
+            String cleanReason = getCleanMessage(e);
             ExtentTestManager.logStatus(
                     Status.WARNING,
-                    "Normal click failed for locator: " + locator +
-                            " | Falling back to JavaScript click. Reason: " + e.getMessage()
+                    "<b>Normal click failed</b> for locator: <span style='color:blue;'>" + locator + "</span><br>" +
+                            "<b>Fallback:</b> JavaScript click.<br>" +
+                            "<b>Reason:</b> " + cleanReason
             );
             ExtentTestManager.captureScreenshot(driver,"JS Click Location");
             jsClick(locator);
@@ -117,6 +119,21 @@ public abstract class BasePage {
 
     protected boolean waitUntilStable(By locator) {
         return wait.waitForElementToBeStable(locator, 1000, 200, 10);
+    }
+
+    private static String getCleanMessage(Throwable t) {
+        if (t == null) return "Unknown Error";
+        String msg = t.getMessage();
+        if (msg == null) return t.getClass().getSimpleName();
+
+        // Selenium messages usually contain "Build info:" followed by environment details.
+        // We split the string and take only the part before that.
+        if (msg.contains("Build info:")) {
+            msg = msg.split("Build info:")[0].trim();
+        }
+
+        // Remove trailing newlines or extra spaces
+        return msg.replaceAll("(\\r|\\n)", " ");
     }
 }
 

@@ -16,32 +16,35 @@ public class ExtentManager {
 
     public static ExtentReports createInstance() {
         if (extent == null) {
-            // safe timestamp (no ':' characters)
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String reportPath = System.getProperty("user.dir") + "/reports/ExtentReport_" + timestamp + ".html";
 
-            // ensure reports/screenshots directory exists up-front
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String reportPath = System.getProperty("user.dir")
+                    + "/reports/ExtentReport_" + timestamp + ".html";
+
             try {
-                Path screenshotsDir = Path.of(System.getProperty("user.dir"), "reports", "screenshots");
+                Path screenshotsDir = Path.of(
+                        System.getProperty("user.dir"), "reports", "screenshots");
                 Files.createDirectories(screenshotsDir);
             } catch (IOException e) {
-                // don't fail startup; log to stderr
-                System.err.println("Warning: unable to create screenshots directory: " + e.getMessage());
+                System.err.println(
+                        "Warning: unable to create screenshots directory: " + e.getMessage());
             }
 
             ExtentSparkReporter sparkReporter = new ExtentSparkReporter(reportPath);
             sparkReporter.config().setDocumentTitle("Automation Report");
             sparkReporter.config().setReportName("BDD Selenium Test Results");
-            sparkReporter.config().setTheme(Theme.STANDARD);
 
-            // ensure correct encoding and timeline
+            // ✅ Cosmetic
+            sparkReporter.config().setTheme(Theme.STANDARD);
             sparkReporter.config().setEncoding("UTF-8");
             sparkReporter.config().setTimelineEnabled(true);
 
             extent = new ExtentReports();
             extent.attachReporter(sparkReporter);
+
             extent.setSystemInfo("Project", "BDD Selenium Framework");
-            extent.setSystemInfo("Environment", "QA");
+            extent.setSystemInfo("Environment",
+                    System.getProperty("env", "QA").toUpperCase());
             extent.setSystemInfo("Tester", System.getProperty("user.name"));
         }
         return extent;
