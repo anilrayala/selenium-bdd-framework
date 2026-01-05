@@ -1,0 +1,18 @@
+{
+  "student1": {
+    "firstName": "Anil",
+    "lastName": "Kumar",
+    "email": "anil@test.com",
+    "mobileNumber": "9876543210",
+    "subjects": "Maths",
+    "currentAddress": "Hyderabad"
+  },
+  "student2": {
+    "firstName": "Disha",
+    "lastName": "Avannavar Parvath Raju",
+    "email": "Disha@test.com",
+    "mobileNumber": "9123456789",
+    "subjects": "English",
+    "currentAddress": "Delhi"
+  }
+}

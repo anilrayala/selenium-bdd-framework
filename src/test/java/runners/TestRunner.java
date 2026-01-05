@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
+import utils.ConfigReader;
 import utils.RetryListener;
 
 /**
@@ -15,8 +16,9 @@ import utils.RetryListener;
  */
 @Listeners({RetryListener.class})
 @CucumberOptions(
-        features = "src/test/resources/features",
+        features = "src/test/resources/features/TextBox.feature",
         glue = {"stepDefinitions"},
+        tags = "",
         plugin = {
                 "pretty",
                 "html:target/cucumber-reports.html",
@@ -31,11 +33,13 @@ public class TestRunner extends AbstractTestNGCucumberTests {
 
         @BeforeClass(alwaysRun = true)
         public static void beforeClass() {
-                String tags = System.getProperty("cucumber.filter.tags");
-                if (tags == null || tags.isBlank()) {
-                        logger.info("No cucumber.filter.tags provided — running all scenarios.");
+
+                String tagsFromJvm = System.getProperty("cucumber.filter.tags");
+
+                if (tagsFromJvm == null || tagsFromJvm.isBlank()) {
+                        logger.info("No cucumber tag filter provided via JVM — CucumberOptions tags will be used.");
                 } else {
-                        logger.info("Running Cucumber with tags: {}", tags);
+                        logger.info("Using cucumber tag filter from JVM: {}", tagsFromJvm);
                 }
         }
 

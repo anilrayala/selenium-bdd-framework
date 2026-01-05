@@ -12,10 +12,11 @@ import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import factory.DriverFactory;
 import reports.ExtentTestManager;
-import utils.ConfigReader;
-import utils.ScenarioContext;
+import utils.*;
 
 import java.io.ByteArrayInputStream;
+import java.util.List;
+import java.util.Map;
 
 public class Hooks extends BaseTest {
 
@@ -24,25 +25,19 @@ public class Hooks extends BaseTest {
     @Before
     public void beforeScenario(Scenario scenario) {
 
-        // Thread-safe scenario context
+        // 1. Scenario metadata
         ScenarioContext.setScenarioName(scenario.getName());
-
-        // MDC for logging
         ThreadContext.put("scenario", scenario.getName());
 
         logger.info("Starting scenario: {}", scenario.getName());
 
+        // 2. Framework initialization
         ConfigReader.loadConfig();
         DriverFactory.initializeDriver();
         setUp();
 
-        // Create Extent test
-        ExtentTestManager.startTest(scenario.getName());
-
-        ExtentTestManager.getTest()
-                .assignAuthor(System.getProperty("user.name"))
-                .assignDevice(ConfigReader.getProperty("browser"))
-                .assignCategory(scenario.getSourceTagNames().toArray(new String[0]));
+        // 3. Create parent + child Extent nodes
+        ExtentTestManager.startScenario();
     }
 
     @AfterStep
@@ -87,14 +82,12 @@ public class Hooks extends BaseTest {
     @After
     public void afterScenario(Scenario scenario) {
 
-        ExtentTestManager.logStatus(
-                scenario.isFailed() ? Status.FAIL : Status.PASS,
-                "Scenario finished: " + scenario.getName()
-        );
+        ExtentTestManager.finishScenario(scenario.isFailed());
 
         tearDown();
 
         // Cleanup
+        TestDataContext.clear();
         ScenarioContext.clear();
         ThreadContext.clearMap();
 

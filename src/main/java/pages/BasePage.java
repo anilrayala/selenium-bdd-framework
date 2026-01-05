@@ -45,15 +45,19 @@ public abstract class BasePage {
                     Status.INFO,
                     "Clicked element using normal click: " + locator
             );
-        } catch (Exception e) {
-            String cleanReason = getCleanMessage(e);
+        } catch (Throwable t) {
+
+            String cleanReason = getCleanMessage(t);
+
             ExtentTestManager.logStatus(
                     Status.WARNING,
                     "<b>Normal click failed</b> for locator: <span style='color:blue;'>" + locator + "</span><br>" +
                             "<b>Fallback:</b> JavaScript click.<br>" +
                             "<b>Reason:</b> " + cleanReason
             );
-            ExtentTestManager.captureScreenshot(driver,"JS Click Location");
+
+            ExtentTestManager.captureScreenshot(driver, "JS_Click_Fallback");
+
             jsClick(locator);
         }
     }
