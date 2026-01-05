@@ -12,10 +12,10 @@ import java.util.Map;
 public final class TestDataLoader {
 
     private static final String EXCEL_PATH =
-            "src/test/resources/testdata/testData.xlsx";
+            "testdata/testData.xlsx";
 
     private static final String JSON_BASE_PATH =
-            "src/test/resources/testdata/json/";
+            "testdata/json/";
 
     private TestDataLoader() {}
 

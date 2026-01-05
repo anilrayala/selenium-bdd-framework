@@ -3,12 +3,12 @@ package utils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.File;
+import java.io.InputStream;
 import java.util.Map;
 
 /**
  * Stateless JSON reader utility.
- * Reads a JSON file and returns data as Map<String, String>.
+ * Reads JSON from classpath and returns Map<String, String>.
  */
 public final class JsonReader {
 
@@ -17,16 +17,27 @@ public final class JsonReader {
     private JsonReader() {}
 
     public static Map<String, Map<String, String>> readJsonAsMap(
-            String filePath
+            String resourcePath
     ) {
-        try {
+        try (InputStream is =
+                     Thread.currentThread()
+                             .getContextClassLoader()
+                             .getResourceAsStream(resourcePath)) {
+
+            if (is == null) {
+                throw new RuntimeException(
+                        "JSON file not found on classpath: " + resourcePath
+                );
+            }
+
             return MAPPER.readValue(
-                    new File(filePath),
+                    is,
                     new TypeReference<Map<String, Map<String, String>>>() {}
             );
+
         } catch (Exception e) {
             throw new RuntimeException(
-                    "Failed to read JSON file: " + filePath, e
+                    "Failed to read JSON from classpath: " + resourcePath, e
             );
         }
     }
