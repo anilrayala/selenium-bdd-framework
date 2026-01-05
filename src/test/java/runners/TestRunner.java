@@ -16,7 +16,7 @@ import utils.RetryListener;
  */
 @Listeners({RetryListener.class})
 @CucumberOptions(
-        features = "src/test/resources/features/TextBox.feature",
+        features = "src/test/resources/features",
         glue = {"stepDefinitions"},
         tags = "",
         plugin = {
