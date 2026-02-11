@@ -5,6 +5,8 @@
     "email": "anil@test.com",
     "mobileNumber": "9876543210",
     "subjects": "Maths",
+    "state": "Rajasthan",
+    "city": "Jaipur",
     "currentAddress": "Hyderabad"
   },
   "student2": {
@@ -13,6 +15,8 @@
     "email": "Disha@test.com",
     "mobileNumber": "9123456789",
     "subjects": "English",
-    "currentAddress": "Delhi"
+    "state": "NCR",
+    "city": "Delhi",
+    "currentAddress": "Bengaluru"
   }
 }

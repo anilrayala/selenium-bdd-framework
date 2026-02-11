@@ -7,7 +7,9 @@ Feature: Student Registration Form using Json Data
 @json
 Scenario Outline: Fill student registration form using json
   Given user fills student form using json "studentForm.json" with key "<studentKey>"
-  Then student form text fields should be populated correctly using json data
+  When user uploads profile picture "Photo.JPG" json data
+  And user selects date of birth "08" "August" "1997" and select gender hobby json data
+  Then student form should be populated correctly using json data
 
 Examples:
   | studentKey |
