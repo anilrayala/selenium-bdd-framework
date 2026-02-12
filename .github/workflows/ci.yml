@@ -16,6 +16,14 @@ on:
           - dev
           - qa
           - prod
+      execution:
+        description: 'Execution mode'
+        required: true
+        default: 'local'
+        type: choice
+        options:
+          - local
+          - remote
       cucumberTags:
         description: 'Cucumber tags to run (optional)'
         required: false
@@ -40,81 +48,88 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
-          cache: 'maven'
+          cache: maven
 
       - name: Show Java & Maven
         run: |
           java -version
           mvn -v
 
-      - name: Detect browser from config and install it
+      # ---------------- INSTALL BROWSER ONLY FOR LOCAL ----------------
+      - name: Detect browser and install (LOCAL only)
+        if: ${{ github.event.inputs.execution != 'remote' }}
         run: |
           set -e
           CONFIG_FILE="src/main/resources/config-${{ github.event.inputs.env }}.properties"
-          echo "Checking config file: $CONFIG_FILE"
-          if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config not found -> default chrome"
-            BROWSER="chrome"
-          else
+
+          if [ -f "$CONFIG_FILE" ]; then
             BROWSER=$(grep -E '^browser=' "$CONFIG_FILE" | cut -d'=' -f2 | tr -d '\r' | tr '[:upper:]' '[:lower:]')
-            if [ -z "$BROWSER" ]; then
-              echo "browser= not set -> default chrome"
-              BROWSER="chrome"
-            fi
           fi
-          echo "Detected browser: $BROWSER"
+
+          BROWSER=${BROWSER:-chrome}
+          echo "Installing browser: $BROWSER"
+
+          sudo apt-get update -y
 
           if [ "$BROWSER" = "chrome" ] || [ "$BROWSER" = "chromium" ]; then
-            sudo apt-get update -y
             sudo apt-get install -y chromium-browser
-            chromium-browser --version || true
-          elif [ "$BROWSER" = "edge" ] || [ "$BROWSER" = "microsoft-edge" ]; then
-            sudo apt-get update -y
+          elif [ "$BROWSER" = "edge" ]; then
             sudo apt-get install -y wget gnupg apt-transport-https ca-certificates
             wget -q -O - https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
             echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" | sudo tee /etc/apt/sources.list.d/microsoft-edge.list
             sudo apt-get update -y
             sudo apt-get install -y microsoft-edge-stable
-            microsoft-edge --version || true
           elif [ "$BROWSER" = "firefox" ]; then
-            sudo apt-get update -y
             sudo apt-get install -y firefox
-            firefox --version || true
           else
-            sudo apt-get update -y
             sudo apt-get install -y chromium-browser
-            chromium-browser --version || true
           fi
-        shell: bash
 
+      # ---------------- RUN TESTS ----------------
       - name: Run tests (mvn)
         env:
           API_KEY: ${{ secrets.API_KEY }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+          # BrowserStack Secrets (safe even if not used)
+          BS_USERNAME: ${{ secrets.BS_USERNAME }}
+          BS_ACCESS_KEY: ${{ secrets.BS_ACCESS_KEY }}
+
         run: |
           set -euo pipefail
 
           ENV_TO_USE="${{ github.event.inputs.env || 'qa' }}"
+          EXEC_MODE="${{ github.event.inputs.execution || 'local' }}"
           TAGS="${{ github.event.inputs.cucumberTags || '' }}"
 
-          echo "Running tests for env='${ENV_TO_USE}' (event='${{ github.event_name }}')"
+          echo "Environment: $ENV_TO_USE"
+          echo "Execution mode: $EXEC_MODE"
 
-          # Prevent accidental prod runs on push/PR
-          if [ "${ENV_TO_USE}" = "prod" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+          # Prevent accidental prod run
+          if [ "$ENV_TO_USE" = "prod" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             echo "❌ Blocking prod run outside manual trigger!"
             exit 1
           fi
 
-          if [ -z "${TAGS}" ]; then
-            mvn -B -Denv="${ENV_TO_USE}" -DretryCount=1 test
+          if [ -z "$TAGS" ]; then
+            mvn -B \
+              -Denv="$ENV_TO_USE" \
+              -Dexecution="$EXEC_MODE" \
+              -DretryCount=1 test
           else
-            mvn -B -Denv="${ENV_TO_USE}" -Dcucumber.filter.tags="${TAGS}" -DretryCount=1 test
+            mvn -B \
+              -Denv="$ENV_TO_USE" \
+              -Dexecution="$EXEC_MODE" \
+              -Dcucumber.filter.tags="$TAGS" \
+              -DretryCount=1 test
           fi
 
+      # ---------------- REPORTS ----------------
       - name: Ensure reports folder exists
         run: mkdir -p reports
 
       - name: Upload Extent + Summary artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports-${{ github.event.inputs.env || 'qa' }}
@@ -124,15 +139,12 @@ jobs:
             target/cucumber-reports.html
             reports/summary.json
 
-      - name: Generate Allure report (Maven plugin)
+      - name: Generate Allure report
         if: always()
         run: |
-          set -e
-          echo "Generating Allure report..."
-          # allure.results.directory is set by surefire pom config to target/allure-results
-          mvn -B allure:report || echo "⚠️ Allure generation failed (no results or plugin issue)"
+          mvn -B allure:report || echo "⚠️ Allure generation failed"
 
-      - name: Upload Allure report (HTML + raw JSON results)
+      - name: Upload Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:

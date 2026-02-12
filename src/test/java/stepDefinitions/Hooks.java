@@ -7,6 +7,7 @@ import io.qameta.allure.Allure;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
@@ -82,11 +83,38 @@ public class Hooks extends BaseTest {
     @After
     public void afterScenario(Scenario scenario) {
 
+        WebDriver driver = DriverFactory.getDriver();
+
+        try {
+
+            // 🔹 Update BrowserStack session status only for remote runs
+            if ("remote".equalsIgnoreCase(ConfigReader.getProperty("execution"))
+                    && driver instanceof JavascriptExecutor js) {
+
+                String status = scenario.isFailed() ? "failed" : "passed";
+                String reason = scenario.isFailed()
+                        ? "Scenario Failed: " + scenario.getName()
+                        : "Scenario Passed";
+
+                js.executeScript(
+                        "browserstack_executor: {\"action\": \"setSessionStatus\", " +
+                                "\"arguments\": {\"status\":\"" + status +
+                                "\", \"reason\": \"" + reason + "\"}}");
+
+                logger.info("BrowserStack session updated: {}", status);
+            }
+
+        } catch (Exception e) {
+            logger.warn("Failed to update BrowserStack session: {}", e.getMessage());
+        }
+
+        // Finish reporting
         ExtentTestManager.finishScenario(scenario.isFailed());
 
+        // Driver teardown
         tearDown();
 
-        // Cleanup
+        // Cleanup contexts
         TestDataContext.clear();
         ScenarioContext.clear();
         ThreadContext.clearMap();
